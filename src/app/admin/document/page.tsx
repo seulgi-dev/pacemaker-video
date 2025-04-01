@@ -15,42 +15,47 @@ import {
   FormMessage
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import FileUpload from '@/components/FileUpload';
 
 const formSchema = z.object({
-  videoId: z.string().min(2, {
-    message: 'videoId must be at least 2 characters.'
-  }),
   title: z.string().min(2, {
     message: 'title must be at least 2 characters.'
   }),
   description: z.string().min(2, {
     message: 'description must be at least 2 characters.'
-  })
+  }),
+  document: z
+    .array(z.instanceof(File))
+    .nonempty('Please upload at least one file')
 });
 
-export default function AdminVideo() {
+export default function AdminDocument() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      videoId: '',
       title: '',
-      description: ''
+      description: '',
+      document: []
     }
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const res = await fetch('/api/videos', {
+      const formData = new FormData();
+      formData.append('title', values.title);
+      formData.append('description', values.description);
+      if (values.document) {
+        formData.append('document', values.document[0]);
+      }
+
+      const res = await fetch('/api/document', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(values)
+        body: formData
       });
 
       if (res.ok) {
-        const data = await res.json();
-        toast('Response:', data);
+        toast('File uploaded successfully');
+        form.reset();
       } else {
         toast('Failed to submit form');
       }
@@ -62,20 +67,6 @@ export default function AdminVideo() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <FormField
-          control={form.control}
-          name="videoId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Video ID</FormLabel>
-              <FormControl>
-                <Input placeholder="shadcn" {...field} />
-              </FormControl>
-              <FormDescription></FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         <FormField
           control={form.control}
           name="title"
@@ -100,6 +91,19 @@ export default function AdminVideo() {
                 <Input placeholder="shadcn" {...field} />
               </FormControl>
               <FormDescription></FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="document"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Upload Files</FormLabel>
+              <FormControl>
+                <FileUpload onChange={field.onChange} />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
